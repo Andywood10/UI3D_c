@@ -8,6 +8,8 @@ import random
 import time
 import pdb
 
+MATCH_DISTANCE = .5
+
 class Move:
 	NONE=0
 	RIGHT=1
@@ -53,6 +55,10 @@ class Colors:
 	highlight    = YELLOW
 	puzzleEmpty  = LIGHT_GREY
 	puzzleFilled = GREEN
+
+class Attr:
+	puzzleIndices = [-1 for i in range(5)] #used to identify spaces to be marked filled/unfilled
+	placed = False #used to determine win
 
 #-------------------------------------------------------------------------------
 # createQuad(left_bot,left_top,right_bot,right_top)
@@ -245,15 +251,20 @@ def buildPuzzle(x,y,z):
 	global shape
 	global blockState
 	global pieces
+	global pieceAttr
+	global placeable
 	
+	placeable = False
 	blockState = []
+	pieceAttr = []
 	
+	#Build puzzle space
 	for i in range(x):
 		for j in range(y):
 			for k in range(z):
 				box = createSolidBox([-0.5,-0.5,-0.5],[0.5,0.5,0.5])
-				box.color(0.8,0.4,0.2)
-				box.alpha(0.2)
+				box.color(Colors.LIGHT_GREY)
+				box.alpha(0.0)
 				box.parent(shape)
 				box.setPosition([0.5+i,0.5+j,0.5+k])
 				blockState.append(False)
@@ -262,7 +273,6 @@ def buildPuzzle(x,y,z):
 	wire.alpha(1.0)
 	wire.setPosition([1.5, 1.5, 1.5])
 
-				
 	# piece 1 - L shaped
 	piece1 = viz.add(viz.GROUP,viz.WORLD)
 	box = createPuzzleCube(0.2,0.5,0.8)
@@ -378,6 +388,12 @@ def buildPuzzle(x,y,z):
 	box.setPosition([0.5,0.5+1.0,0.5])
 	piece1.setPosition([4.0,0.0,0.0])
 	pieces.append(piece1)
+	
+	#build the parallel pieceAttrs (piece attributes) array
+	for p in pieces:
+		tmp = Attr()
+		tmp.puzzleIndices = [-1 for i in range( len(p.getChildren()) )]
+		pieceAttr.append(tmp)
 	
 #-------------------------------------------------------------------------------
 # buildSideBar()
@@ -506,6 +522,7 @@ def keyDown(whichKey):
 	global highlightedObjType
 	global selectedObj
 	global selectedObjType
+	global selectedIndex
 	global blockState
 	
 	#print 'The following key was pressed: ', whichKey
@@ -551,21 +568,30 @@ def keyDown(whichKey):
 		
 	# selection
 	if whichKey == viz.KEY_RETURN:
+		#picking a piece up
 		if selectedObj == None and highlightedObj != None:
 			if highlightedObjType == 'piece':
+				for i in pieceAttr[selectedIndex].puzzleIndices:
+					blockState[i] = False
 				selectedObj = highlightedObj
 				selectedObjType = highlightedObjType
-			elif highlightedObjType == 'block':
-				i = 0
-				for child in shape.getChildren():
-					if highlightedObj == child:
-						blockState[i] = True
-						break
-					i += 1
+				selectedIndex = pieces.index(selectedObj)
+				pieceAttr[selectedIndex].placed = False
+
+		# piece placement (try to drop a piece)
 		elif selectedObj != None:
-			selectedObj = None
-			selectedObjType = None
-			
+			if place_piece(): 
+				check_for_win()
+				selectedObj = None
+				selectedObjType = None
+				selectedIndex = -1
+	# selection #2 (up/down piece selection)
+	if whichKey == 'm':
+		cycle_select(forward = True)
+	elif whichKey == 'n':
+		cycle_select(forward = False)
+		
+	
 	# translation of the selected object is done by moving the cursor
 	# orientation
 	if selectedObj != None:
@@ -583,6 +609,47 @@ def keyDown(whichKey):
 			selectedObj.setEuler(0,0,-90,viz.REL_LOCAL)#yaw,pitch,roll
 
 #-------------------------------------------------------------------------------
+# cycle_select
+#-------------------------------------------------------------------------------
+def cycle_select(forward = True):
+	global selectedObj
+	global selectedIndex
+	global selectedObjType
+	global pieces
+	global pieceAttr
+	
+	if forward:
+		while True:
+			selectedIndex += 1
+			if selectedIndex >= len(pieces):
+				selectedIndex = -1
+				break
+			if not pieceAttr[selectedIndex].placed:
+				break
+	else:
+		while True:
+			selectedIndex -= 1
+			if selectedIndex < -1:
+				selectedIndex = len(pieces)
+				continue
+			if selectedIndex == -1:
+				break
+			if not pieceAttr[selectedIndex].placed:
+				break
+	if selectedIndex == -1:
+		selectedObj.setPosition([25, 25, 25], viz.ABS_GLOBAL)
+		selectedObj.visible(False)
+		selectedObj = None
+		selectedObjType = None
+	else:
+		if selectedObj != None:
+			selectedObj.setPosition([25, 25, 25], viz.ABS_GLOBAL)
+			selectedObj.visible(False)
+		selectedObj = pieces[selectedIndex]
+		selectedObj.visible(True)
+		selectedObjType = 'piece'
+
+#-------------------------------------------------------------------------------
 # keyUp(whichKey)
 #-------------------------------------------------------------------------------
 def keyUp(whichKey):
@@ -597,6 +664,43 @@ def keyUp(whichKey):
 		Navigation.roll = Rotate.NONE
 	if whichKey == 'i' or whichKey == 'k':
 		Navigation.fly = Move.NONE
+
+#-------------------------------------------------------------------------------
+# place_piece
+#-------------------------------------------------------------------------------
+def place_piece():
+	global selectedObj
+	global blockState
+	global deltaVector
+	global stateIndices
+	global placeable
+
+	if selectedObj != None:
+		if placeable:
+			pieceAttr[selectedIndex].placed = True
+			for i in pieceAttr[selectedIndex].puzzleIndices:
+				blockState[i] = True
+			for block in selectedObj.getChildren():
+				block.color(Colors.GREEN)
+			pos = selectedObj.getPosition(viz.ABS_GLOBAL)
+			selectedObj.setPosition([pos[0]+deltaVector[0], pos[1]+deltaVector[1], pos[2]+deltaVector[2]], viz.ABS_GLOBAL)
+			return True
+	return False
+	
+#-------------------------------------------------------------------------------
+# check_for_win
+#-------------------------------------------------------------------------------
+def check_for_win():
+	global blockState
+	global won
+	count = 0
+	for p in pieceAttr:
+		if p.placed is not True:
+			print count
+			return False
+		count += 1
+	print "You win"
+	won = True
 
 #-------------------------------------------------------------------------------
 # updateView()
@@ -638,19 +742,24 @@ def updateCursor():
 	global highlightedObjType
 	global selectedObj
 	global selectedObjType
-	global carrying
-	
+	global selectedIndex
+	global deltaVector
+	global blockState
+	global pieceAttr
+	global placeable
+
 	# update cursor position
 	cursor.setMatrix(viz.MainView.getMatrix(), viz.ABS_GLOBAL)
 	cursor.setPosition(cursorPos, viz.REL_LOCAL)
 	absPos = cursor.getPosition(viz.ABS_GLOBAL)
 
-	if(not carrying):
+	# Using the Cursor
+	if selectedObj == None:
 		# check if cursor is inside any of the pieces
 		highlightedObj = None
 		highlightedObjType = None
 		isInside = False
-		for piece in pieces:
+		for i, piece in enumerate(pieces):
 			children = piece.getChildren()
 			
 			# have to check each one of the individual boxes of the piece
@@ -660,9 +769,10 @@ def updateCursor():
 					isInside = True
 					highlightedObj = piece
 					highlightedObjType = 'piece'
+					#selectedIndex = i
 					break
 			
-			# if the cursor is inside any of the boxes, highlight them all, indicate carrying piece
+			# if the cursor is inside any of the boxes, highlight them all
 			if isInside == True or piece == selectedObj:
 				for box in children:
 					box.color(Colors.highlight)
@@ -670,25 +780,37 @@ def updateCursor():
 			else:
 				for box in children:
 					box.color(Colors.LIGHT_BLUE)
+
+	#Dragging a piece
+	else:
+		placeable = True
+		deltaVector = [10,10,10]
 		
-		# if the cursor is not 
-		if isInside == False:
-			# check if cursor is inside any of the cubes in the puzzle space
-			children = shape.getChildren()
-			count = 0
-			for box in children:
-				pos = box.getPosition(viz.ABS_GLOBAL)
-				if absPos[0] >= pos[0]-0.5 and absPos[0] <= pos[0]+0.5 and absPos[1] >= pos[1]-0.5 and absPos[1] <= pos[1]+0.5 and absPos[2] >= pos[2]-0.5 and absPos[2] <= pos[2]+0.5:
-					box.color(Colors.highlight)
-					highlightedObj = box
-					highlightedObjType = 'block'
-				else:
-					if blockState[count] == False:
-						box.color(Colors.puzzleEmpty)
-					else:
-						box.color(Colors.puzzleFilled)
-				count += 1
-	
+		#check each block of the piece against each box in the puzzle space
+		for i, pieceBox in enumerate(selectedObj.getChildren()):
+			pbc = pieceBox.getBoundingBox(viz.ABS_GLOBAL).center
+			pieceAttr[selectedIndex].puzzleIndices[i] = -1
+			for j, shapeBox in enumerate(shape.getChildren()):
+				sbc = shapeBox.getBoundingBox(viz.ABS_GLOBAL).center
+				vec = [sbc[0]-pbc[0], sbc[1]-pbc[1], sbc[2]-pbc[2]]
+				mag = magnitude(vec)
+				if mag <= MATCH_DISTANCE and blockState[j] != True:
+					pieceAttr[selectedIndex].puzzleIndices[i] = j
+					if mag < magnitude(deltaVector): 
+						deltaVector = vec #everything is orthogonal, so all vectors will be the same size
+					break
+			if pieceAttr[selectedIndex].puzzleIndices[i] == -1:
+				#box is outsize of puzzle or in an already filled space
+				placeable = False
+				pieceBox.color(Colors.RED)
+				
+		if placeable:
+			for box in selectedObj.getChildren():
+				box.color(Colors.highlight)
+			
+def magnitude(vec):
+	return math.sqrt( (vec[0]*vec[0]) + (vec[1]*vec[1]) + (vec[2]*vec[2]))
+
 #-------------------------------------------------------------------------------
 # updateSelectedObj()
 #-------------------------------------------------------------------------------
@@ -696,13 +818,16 @@ def updateSelectedObj():
 	global cursor
 	global selectedObj
 	global selectedObjType
-	
+	global deltaVector
+	global placeable
+
 	# update selected object position
 	if selectedObj != None:
 		selectedObj.setPosition(0,0,0,viz.ABS_GLOBAL)
 		cpos = cursor.getPosition(viz.ABS_GLOBAL)
 		center = selectedObj.getBoundingBox(viz.ABS_GLOBAL).center
 		selectedObj.setPosition([cpos[0]-center[0],cpos[1]-center[1],cpos[2]-center[2]], viz.ABS_GLOBAL)
+
 
 #-------------------------------------------------------------------------------
 # updateSideBar()
@@ -762,7 +887,7 @@ def updateSideBar():
 	
 	# for each item in the sidebar, update rotation animation and place them where they belong in the sidebar
 	itemIndex = 0
-	for item in sidebar:
+	for i, item in enumerate(sidebar):
 		# make sure we draw this after everything else in the scene indenpendently of the depth buffer
 		item.depthFunc(viz.GL_ALWAYS)
 		item.drawOrder(101)
@@ -787,6 +912,13 @@ def updateSideBar():
 		#else:
 		#	for box in item.getChildren():
 		#		box.color(Colors.LIGHT_BLUE)
+		c = Colors.LIGHT_BLUE
+		if i == selectedIndex: 
+			c = Colors.highlight
+		elif pieceAttr[i].placed:
+			c = Colors.LIGHT_GREY
+		for box in item.getChildren():
+				box.color(c)
 		itemIndex += 1
 	
 
@@ -796,11 +928,14 @@ def updateSideBar():
 # Include here any function you need to run in the main loop.
 #-------------------------------------------------------------------------------
 def update():
+	global won
+	
 	updateView()
 	updateCursor()
 	updateSelectedObj()
 	updateSideBar()
-	# check completion
+	if won:
+		pass #should do something fun here
 
 #-------------------------------------------------------------------------------
 # main()
@@ -821,7 +956,8 @@ def main():
 	global selectedObjType
 	global animRot
 	global identity
-	global carrying
+	global selectedIndex
+	global won
 	
 	#---------------------------------------------------------------------------
 	# init vizard
@@ -837,8 +973,8 @@ def main():
 	viz.setOption('viz.fullscreen.monitor',2)  
 
 	# start in full screen
-	viz.go(viz.FULLSCREEN)
-	#viz.go()
+	#viz.go(viz.FULLSCREEN)
+	viz.go()
 
 	# set cursor visibility
 	#viz.mouse.setVisible(viz.OFF)
@@ -857,6 +993,9 @@ def main():
 	
 	# list of pieces available
 	pieces = []
+	
+	# won the game
+	won = False
 	
 	# group with all cubes in their final position - read from file
 	shape = viz.add(viz.GROUP,viz.WORLD)
@@ -885,9 +1024,9 @@ def main():
 	
 	selectedObj = None
 	selectedObjType = None
+	selectedIndex = -1
 	highlightedObj = None
 	highlightedObjType = None
-	carrying = False
 	
 	# assign keyDown and keyUp as callback functions for events
 	viz.callback(viz.KEYDOWN_EVENT, keyDown)

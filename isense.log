@@ -1,0 +1,21 @@
+InterSense Library ver. 4.04 32-bit
+Copyright 1998-2007 InterSense Inc.
+http://www.intersense.com
+Tel: 781-541-6330
+
+Looking for InterSense tracking device number 1. 
+Please wait 
+Looking for IS-X00 device on port 1 (0.23)
+...Looking for InterTrax on port 1 (0.61)
+InterTrax: Failed to reset
+
+Looking for SDP devices (3.01)
+DEVWRN: Device config file not found: isradio.ini
+Failed to set control word on \\.\COM1 (The parameter is incorrect.)
+DEVWRN: SDP initialization failed
+
+No SDP Deviced found (3.40)
+
+InterSense tracker not present
+Finished (3.41)
+Dll Unloaded, cleaning up.

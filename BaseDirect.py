@@ -8,6 +8,8 @@ import random
 import time
 import pdb
 import vizspace
+import vizcam
+
 
 MATCH_DISTANCE = .5
 
@@ -1221,23 +1223,32 @@ def main():
 #		is900Sensor1 = isense.addTracker(port=1,station=2)
 	
 #	viz.add('court.ive')
+
+	"""
+	Set the pivot point 2 meters above the origin.
+	Set the rotation mode to blend its orientation
+	from its current orientation to that associated
+	with the pivot.
+	"""
+#	gotoRight = vizact.goto([2,1,-2],rotate_mode=viz.BLEND_ROTATE,pivot=[0,2,0],ori_mask=viz.BODY_ORI)
+#	gotoLeft = vizact.goto([-2,2,-2],rotate_mode=viz.BLEND_ROTATE,pivot=[0,2,0],ori_mask=viz.BODY_ORI)
+
+#Use keyboard actions to move the viewpoint.
+#	vizact.onkeydown(viz.KEY_ALT_L, viz.MainView.runAction, gotoRight )
 #
-#"""
-#Set the pivot point 2 meters above the origin.
-#Set the rotation mode to blend its orientation
-#from its current orientation to that associated
-#with the pivot.
-#"""
-#gotoRight = vizact.goto([2,1,-2],rotate_mode=viz.BLEND_ROTATE,pivot=[0,2,0],ori_mask=viz.BODY_ORI)
-#gotoLeft = vizact.goto([-2,2,-2],rotate_mode=viz.BLEND_ROTATE,pivot=[0,2,0],ori_mask=viz.BODY_ORI)
-#
-##Use keyboard actions to move the viewpoint.
-#vizact.onkeydown(viz.KEY_RIGHT, viz.MainView.runAction, gotoRight )
-#vizact.onkeydown(viz.KEY_LEFT, viz.MainView.runAction, gotoLeft ) 
+#	vizact.onkeydown(viz.KEY_ALT_R, viz.MainView.runAction, gotoLeft ) 
 	
 	
+#	cam = vizcam.PivotNavigate(center=[0,1,0],distance=4)
+#	viz.cam.setHandler(cam)
+#	
+#	cam.enabled = True
+#	viz.cam.setHandler(vizcam.KeyboardCamera())
+	
+#	vizcam.PivotNavigate(center=[0,1,0],distance=5)
+
 	# assign space mouse callbacks
-	viz.callback(vizspace.ROTATE_EVENT,spaceRot)
+	#viz.callback(vizspace.ROTATE_EVENT,spaceRot)
 
 	old_data = []
 	all_data = []	
@@ -1252,6 +1263,8 @@ def main():
 	# start in full screen
 	#viz.go(viz.FULLSCREEN)
 	viz.go()
+
+#	vizcam.PivotNavigate(center=[0,1,0],distance=5)
 
 	# set cursor visibility
 	#viz.mouse.setVisible(viz.OFF)
@@ -1354,7 +1367,8 @@ def updateIS900Data():
 	#Trigger Button
 	if state & 32 and not int(old_data) & 32:
 		print 'Trigger Button is down'
-		selection()
+		selection();
+		rem_piece();
 	elif int(old_data) & 32 and not state & 32:
 		place_piece()
 		print 'Trigger Button is up'

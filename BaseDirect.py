@@ -1220,6 +1220,22 @@ def main():
 #		iSenseMode = True
 #		is900Sensor1 = isense.addTracker(port=1,station=2)
 	
+#	viz.add('court.ive')
+#
+#"""
+#Set the pivot point 2 meters above the origin.
+#Set the rotation mode to blend its orientation
+#from its current orientation to that associated
+#with the pivot.
+#"""
+#gotoRight = vizact.goto([2,1,-2],rotate_mode=viz.BLEND_ROTATE,pivot=[0,2,0],ori_mask=viz.BODY_ORI)
+#gotoLeft = vizact.goto([-2,2,-2],rotate_mode=viz.BLEND_ROTATE,pivot=[0,2,0],ori_mask=viz.BODY_ORI)
+#
+##Use keyboard actions to move the viewpoint.
+#vizact.onkeydown(viz.KEY_RIGHT, viz.MainView.runAction, gotoRight )
+#vizact.onkeydown(viz.KEY_LEFT, viz.MainView.runAction, gotoLeft ) 
+	
+	
 	# assign space mouse callbacks
 	viz.callback(vizspace.ROTATE_EVENT,spaceRot)
 
